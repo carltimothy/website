@@ -135,9 +135,9 @@
 
   <script>
     function updateCountdown() {
-      const newYearDate = new Date('December 25, 2025 00:00:00').getTime();
+      const ChristmasDate = new Date('December 25, 2026 00:00:00').getTime();
       const now = new Date().getTime();
-      const timeLeft = newYearDate - now;
+      const timeLeft = ChristmasDate - now;
 
       if (timeLeft <= 0) {
         clearInterval(countdownInterval);
@@ -158,7 +158,6 @@
 
     const countdownInterval = setInterval(updateCountdown, 1000);
   </script>
-<button class="redirect-button" onclick="window.location.href='https://jingexz01.online/newyear';">New Year Countdown</button>
-  <button class="redirect-button" onclick="window.location.href='https://t.me/Jingexz011';">t.me/Jingexz011</button>
+<button class="redirect-button" onclick="window.location.href='/newyear';">New Year Countdown</button>
 </body>
 </html>
