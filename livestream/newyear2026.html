@@ -93,26 +93,17 @@ body {
 </style>
 </head>
 <body>
-
-<div class="dashboard">
-  <div class="chat">
-    <p><strong>System:</strong> Live countdown dashboard</p>
-    <p id="chatMsg"><strong style="color: #0f9;">🌍 Starting countdown...</strong></p>
-  </div>
-
   <div class="main">
     <div class="top-title">New Year 2026 Countdown</div>
     <div class="top-info">
-      Current Zone: <span id="currentZone">New Zealand (GMT+12)</span> | 
-      Progress: <span id="progress">1/24</span>
+      Current Zone: <span id="currentZone"></span> | 
+      Progress: <span id="progress"></span>
     </div>
     <div class="panels" id="panels"></div>
   </div>
-</div>
 
 <script>
 const panelsEl = document.getElementById('panels');
-const chatMsgEl = document.getElementById('chatMsg');
 const currentZoneEl = document.getElementById('currentZone');
 const progressEl = document.getElementById('progress');
 const targetYear = 2026;
@@ -177,7 +168,7 @@ function getLocalTime(offset){
 function renderPanels(){
   panelsEl.innerHTML = '';
   panels.length = 0;
-  for(let i=0;i<15;i++){
+  for(let i=0;i<24;i++){
     const idx = (currentStartIndex+i)%allZones.length;
     const z = allZones[idx];
     const panel = document.createElement('div');
@@ -203,7 +194,6 @@ function renderPanels(){
 function updateTopInfo(){
   currentZoneEl.textContent = `${panels[0].zone.country} (GMT${panels[0].zone.offset>=0?'+':''}${panels[0].zone.offset})`;
   progressEl.textContent = `${(currentStartIndex+1)}/${allZones.length}`;
-  chatMsgEl.innerHTML = `<strong style="color:#0f9;">🌍 Now counting down: ${panels[0].zone.country}</strong>`;
 }
 
 function tick(){
@@ -225,38 +215,6 @@ function tick(){
 
 renderPanels();
 setInterval(tick,1000);
-
-const chatEl = document.querySelector('.chat');
-let displayedMessages = new Set();
-
-function addChatMessage(user, message, color='#ccc'){
-  const key = user + '||' + message;
-  if(displayedMessages.has(key)) return; 
-  displayedMessages.add(key);
-
-  const p = document.createElement('p');
-  p.innerHTML = `<strong style="color:${color}">${user}:</strong> ${message}`;
-  chatEl.appendChild(p);
-
-  chatEl.scrollTo({
-    top: chatEl.scrollHeight,
-    behavior: 'smooth'
-  });
-}
-
-async function fetchComments() {
-  try {
-    const res = await fetch('http://localhost:3000/'); 
-    const comments = await res.json();
-    comments.forEach(c => addChatMessage(c.author, c.text, '#ff0')); 
-  } catch (e) {
-    const errorMsg = e.message || e.toString();
-    addChatMessage('System', `Failed to load YouTube comments: ${errorMsg}`, 'red');
-  }
-}
-
-fetchComments();
-setInterval(fetchComments, 5000);
 </script>
 </body>
 </html>
