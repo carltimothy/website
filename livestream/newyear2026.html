@@ -12,95 +12,31 @@ body {
   background-size: cover;
   color: #fff;
 }
-.dashboard {
-  display: grid;
-  grid-template-columns: 400px 1fr;
-  height: 100vh;
-  gap: 10px;
-  padding: 10px;
-}
-.chat {
-  background: rgba(0,0,0,0.7);
-  border-radius: 6px;
-  padding: 10px;
-  overflow-y: auto;
-  font-size: 14px;
-}
-.chat p { margin: 6px 0; color: #ccc; }
-.main {
-  display: grid;
-  grid-template-rows: auto auto 1fr;
-  gap: 10px;
-}
-.top-title {
-  background: rgba(26,26,26,0.7);
-  border-radius: 6px;
-  padding: 20px;
-  text-align:center;
-  font-size:32px;
-  font-weight:700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-  overflow: hidden;
-}
-.top-info {
-  background: rgba(26,26,26,0.7);
-  border-radius: 6px;
-  padding: 10px;
-  text-align: center;
-  font-size: 16px;
-  color: #0f9;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.panels {
-  display: grid;
-  grid-template-columns: repeat(3,1fr);
-  grid-auto-rows: 180px;
-  gap: 10px;
-}
-.panel {
-  background: rgba(0,0,0,0.7);
-  border-radius:6px;
-  padding:20px;
-  position:relative;
-  overflow:hidden;
-  text-align:center;
-  border: 2px solid #333;
-  transition: all 0.3s ease;
-}
-.panel.active {
-  border: 2px solid #0f9;
-  box-shadow: 0 0 15px rgba(0,255,153,0.3);
-}
+.main { display: grid; grid-template-rows: auto auto 1fr; gap: 10px; padding: 10px; }
+.top-title { background: rgba(26,26,26,0.7); border-radius: 6px; padding: 20px; text-align:center; font-size:32px; font-weight:700; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.top-info { background: rgba(26,26,26,0.7); border-radius: 6px; padding: 10px; text-align: center; font-size: 16px; color: #0f9; font-weight:600; display:flex; justify-content:center; align-items:center; }
+.panels { display: grid; grid-template-columns: repeat(3,1fr); grid-auto-rows: 180px; gap: 10px; }
+.panel { background: rgba(0,0,0,0.7); border-radius:6px; padding:20px; position:relative; overflow:hidden; text-align:center; border: 2px solid #333; }
+.panel.active { border: 2px solid #0f9; box-shadow: 0 0 15px rgba(0,255,153,0.3); }
 .panel h2 { margin:0 0 10px; font-size:20px; }
-.big { font-size:48px; font-weight:700; margin-bottom:5px; font-family: 'Courier New', monospace; }
-.labels {
-  display:flex;
-  justify-content:center;
-  gap:30px;
-  font-size:14px;
-  margin-bottom:5px;
-}
+.big { font-size:48px; font-weight:700; margin-bottom:5px; font-family: 'Courier New', monospace; display:flex; justify-content:center; gap:4px; }
+.digit-column { position: relative; width: 1ch; height: 1em; overflow: hidden; display: inline-block; font-variant-numeric: tabular-nums; }
+.digit-track { position: absolute; top: 0; left: 0; transition: transform 0.5s ease-in-out; }
+.digit-track span { display: block; height: 1em; text-align: center; }
+.labels { display:flex; justify-content:center; gap:30px; font-size:14px; margin-bottom:5px; }
 .timezone { position:absolute; bottom:10px; left:10px; font-size:14px; opacity:0.7; }
 .localtime { position:absolute; bottom:10px; right:10px; font-size:14px; opacity:0.7; }
 </style>
 </head>
 <body>
-  <div class="main">
-    <div class="top-title">New Year 2026 Countdown</div>
-    <div class="top-info">
-      Current Zone: <span id="currentZone"></span> | 
-      Progress: <span id="progress"></span>
-    </div>
-    <div class="panels" id="panels"></div>
+<div class="main">
+  <div class="top-title">New Year 2026 Countdown</div>
+  <div class="top-info">
+    Current Zone: <span id="currentZone"></span> | 
+    Progress: <span id="progress"></span>
   </div>
+  <div class="panels" id="panels"></div>
+</div>
 
 <script>
 const panelsEl = document.getElementById('panels');
@@ -145,7 +81,12 @@ function fmt(ms){
   const h=Math.floor((s%86400)/3600);
   const m=Math.floor((s%3600)/60);
   const sec=s%60;
-  return {days:String(d).padStart(2,'0'),hours:String(h).padStart(2,'0'),minutes:String(m).padStart(2,'0'),seconds:String(sec).padStart(2,'0')};
+  return {
+    days:String(d).padStart(2,'0'),
+    hours:String(h).padStart(2,'0'),
+    minutes:String(m).padStart(2,'0'),
+    seconds:String(sec).padStart(2,'0')
+  };
 }
 
 function getRemaining(offset){
@@ -175,14 +116,52 @@ function renderPanels(){
     panel.className = 'panel';
     if(i===0) panel.classList.add('active');
 
-    const title = document.createElement('h2'); title.textContent = z.country;
-    const bigDiv = document.createElement('div'); bigDiv.className='big'; bigDiv.textContent='00:00:00:00';
-    const labelsDiv = document.createElement('div'); labelsDiv.className='labels';
+    const title = document.createElement('h2'); 
+    title.textContent = z.country;
+
+    const bigDiv = document.createElement('div'); 
+    bigDiv.className='big';
+
+    const countdownStr = "00:00:00:00"; // template for column count
+    for (let j = 0; j < countdownStr.length; j++) {
+      const char = countdownStr[j];
+      if (/[0-9]/.test(char)) {
+        const column = document.createElement('div');
+        column.className='digit-column';
+        const track = document.createElement('div');
+        track.className='digit-track';
+        for (let d = 0; d <= 9; d++) {
+          const span = document.createElement('span');
+          span.textContent = d;
+          track.appendChild(span);
+        }
+        column.appendChild(track);
+        bigDiv.appendChild(column);
+      } else {
+        // colon
+        const span = document.createElement('span');
+        span.textContent = char;
+        span.style.display = 'inline-block';
+        span.style.width = '0.6ch';
+        span.style.textAlign = 'center';
+        bigDiv.appendChild(span);
+      }
+    }
+
+    const labelsDiv = document.createElement('div'); 
+    labelsDiv.className='labels';
     ['Days','Hours','Minutes','Seconds'].forEach(l=>{
-      const lbl=document.createElement('div'); lbl.textContent=l; labelsDiv.appendChild(lbl);
+      const lbl=document.createElement('div'); 
+      lbl.textContent=l; 
+      labelsDiv.appendChild(lbl);
     });
-    const tzDiv=document.createElement('div'); tzDiv.className='timezone'; tzDiv.textContent=`GMT ${z.offset>=0?'+':''}${z.offset}`;
-    const localDiv=document.createElement('div'); localDiv.className='localtime'; localDiv.textContent='00:00 AM';
+
+    const tzDiv=document.createElement('div'); 
+    tzDiv.className='timezone'; 
+    tzDiv.textContent=`GMT ${z.offset>=0?'+':''}${z.offset}`;
+    const localDiv=document.createElement('div'); 
+    localDiv.className='localtime'; 
+    localDiv.textContent='00:00 AM';
 
     panel.append(title,bigDiv,labelsDiv,tzDiv,localDiv);
     panelsEl.appendChild(panel);
@@ -196,16 +175,28 @@ function updateTopInfo(){
   progressEl.textContent = `${(currentStartIndex+1)}/${allZones.length}`;
 }
 
+function animateDigits(bigDiv, newText){
+  const columns = bigDiv.querySelectorAll('.digit-column');
+  let colIndex = 0;
+  for (let i = 0; i < newText.length; i++) {
+    const char = newText[i];
+    if (/[0-9]/.test(char)) {
+      const track = columns[colIndex].querySelector('.digit-track');
+      track.style.transform = `translateY(-${parseInt(char)}em)`;
+      colIndex++;
+    }
+  }
+}
+
 function tick(){
   let rotate = false;
   panels.forEach((p,i)=>{
     const remaining = getRemaining(p.zone.offset);
     const t = fmt(remaining);
-    p.bigDiv.textContent = `${t.days}:${t.hours}:${t.minutes}:${t.seconds}`;
+    const text = `${t.days}:${t.hours}:${t.minutes}:${t.seconds}`;
+    animateDigits(p.bigDiv, text);
     p.localDiv.textContent = getLocalTime(p.zone.offset);
-    if(remaining<=0 && i===0){
-      rotate=true;
-    }
+    if(remaining<=0 && i===0) rotate=true;
   });
   if(rotate){
     currentStartIndex = (currentStartIndex+1)%allZones.length;
