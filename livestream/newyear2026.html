@@ -30,7 +30,7 @@ body {
 </head>
 <body>
 <div class="main">
-  <div class="top-title">New Year 2026 Countdown</div>
+  <div class="top-title">New Year 2027 Countdown</div>
   <div class="top-info">
     Current Zone: <span id="currentZone"></span> | 
     Progress: <span id="progress"></span>
@@ -42,7 +42,7 @@ body {
 const panelsEl = document.getElementById('panels');
 const currentZoneEl = document.getElementById('currentZone');
 const progressEl = document.getElementById('progress');
-const targetYear = 2026;
+const targetYear = 2027;
 
 const allZones = [
   {offset:12, country:'New Zealand'},
@@ -122,7 +122,7 @@ function renderPanels(){
     const bigDiv = document.createElement('div'); 
     bigDiv.className='big';
 
-    const countdownStr = "00:00:00:00"; // template for column count
+    const countdownStr = "00:00:00:00"; 
     for (let j = 0; j < countdownStr.length; j++) {
       const char = countdownStr[j];
       if (/[0-9]/.test(char)) {
@@ -138,7 +138,6 @@ function renderPanels(){
         column.appendChild(track);
         bigDiv.appendChild(column);
       } else {
-        // colon
         const span = document.createElement('span');
         span.textContent = char;
         span.style.display = 'inline-block';
