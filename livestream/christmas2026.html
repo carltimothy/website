@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Global Christmas Countdown Dashboard</title>
+<style>
+body {
+  margin: 0;
+  font-family: "Segoe UI", Roboto, sans-serif;
+  background: url('https://raw.githubusercontent.com/Jabul6969/website/refs/heads/main/src/christmasbg.gif') no-repeat center center fixed;
+  background-size: cover;
+  color: #fff;
+}
+.main { display: grid; grid-template-rows: auto auto 1fr; gap: 10px; padding: 10px; }
+.top-title { background: rgba(26,26,26,0.7); border-radius: 6px; padding: 20px; text-align:center; font-size:32px; font-weight:700; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.top-info { background: rgba(26,26,26,0.7); border-radius: 6px; padding: 10px; text-align: center; font-size: 16px; color: #0f9; font-weight:600; display:flex; justify-content:center; align-items:center; }
+.panels { display: grid; grid-template-columns: repeat(3,1fr); grid-auto-rows: 180px; gap: 10px; }
+.panel { background: rgba(0,0,0,0.7); border-radius:6px; padding:20px; position:relative; overflow:hidden; text-align:center; border: 2px solid #333; }
+.panel.active { border: 2px solid #0f9; box-shadow: 0 0 15px rgba(0,255,153,0.3); }
+.panel h2 { margin:0 0 10px; font-size:20px; }
+.big { font-size:48px; font-weight:700; margin-bottom:5px; font-family: 'Courier New', monospace; display:flex; justify-content:center; gap:4px; }
+.digit-column { position: relative; width: 1ch; height: 1em; overflow: hidden; display: inline-block; font-variant-numeric: tabular-nums; }
+.digit-track { position: absolute; top: 0; left: 0; transition: transform 0.5s ease-in-out; }
+.digit-track span { display: block; height: 1em; text-align: center; }
+.labels { display:flex; justify-content:center; gap:30px; font-size:14px; margin-bottom:5px; }
+.timezone { position:absolute; bottom:10px; left:10px; font-size:14px; opacity:0.7; }
+.localtime { position:absolute; bottom:10px; right:10px; font-size:14px; opacity:0.7; }
+</style>
+</head>
+<body>
+<div class="main">
+  <div class="top-title">Christmas 2026 Countdown</div>
+  <div class="top-info">
+    Current Zone: <span id="currentZone"></span> | 
+    Progress: <span id="progress"></span>
+  </div>
+  <div class="panels" id="panels"></div>
+</div>
+
+<script>
+const panelsEl = document.getElementById('panels');
+const currentZoneEl = document.getElementById('currentZone');
+const progressEl = document.getElementById('progress');
+const targetYear = 2026;
+
+const allZones = [
+  {offset:12, country:'New Zealand'},
+  {offset:11, country:'Solomon Is.'},
+  {offset:10, country:'Australia'},
+  {offset:9, country:'Japan'},
+  {offset:8, country:'Philippines'},
+  {offset:7, country:'Thailand'},
+  {offset:6, country:'Bangladesh'},
+  {offset:5, country:'Pakistan'},
+  {offset:4, country:'UAE'},
+  {offset:3, country:'Russia'},
+  {offset:2, country:'South Africa'},
+  {offset:1, country:'Portugal'},
+  {offset:0, country:'UK'},
+  {offset:-1, country:'Cape Verde'},
+  {offset:-2, country:'Mid-Atlantic'},
+  {offset:-3, country:'Brazil'},
+  {offset:-4, country:'Canada (East)'},
+  {offset:-5, country:'USA (East)'},
+  {offset:-6, country:'USA (Central)'},
+  {offset:-7, country:'USA (Mountain)'},
+  {offset:-8, country:'USA (Pacific)'},
+  {offset:-9, country:'Alaska'},
+  {offset:-10, country:'Hawaii'},
+  {offset:-11, country:'American Samoa'}
+];
+
+let currentStartIndex = 0;
+const panels = [];
+
+function fmt(ms){
+  if(ms<=0) return {days:'00', hours:'00', minutes:'00', seconds:'00'};
+  const s=Math.floor(ms/1000);
+  const d=Math.floor(s/86400);
+  const h=Math.floor((s%86400)/3600);
+  const m=Math.floor((s%3600)/60);
+  const sec=s%60;
+  return {
+    days:String(d).padStart(2,'0'),
+    hours:String(h).padStart(2,'0'),
+    minutes:String(m).padStart(2,'0'),
+    seconds:String(sec).padStart(2,'0')
+  };
+}
+
+function getRemaining(offset){
+  const now = new Date();
+  const nyUTC = new Date(Date.UTC(targetYear,11,25,0-offset,0,0));
+  return nyUTC-now;
+}
+
+function getLocalTime(offset){
+  const now = new Date();
+  const utc = now.getTime() + now.getTimezoneOffset()*60000;
+  const local = new Date(utc + offset*3600000);
+  let h = local.getHours();
+  const m = String(local.getMinutes()).padStart(2,'0');
+  const ampm = h>=12?'PM':'AM';
+  h = h%12||12;
+  return `${h}:${m} ${ampm}`;
+}
+
+function renderPanels(){
+  panelsEl.innerHTML = '';
+  panels.length = 0;
+  for(let i=0;i<24;i++){
+    const idx = (currentStartIndex+i)%allZones.length;
+    const z = allZones[idx];
+    const panel = document.createElement('div');
+    panel.className = 'panel';
+    if(i===0) panel.classList.add('active');
+
+    const title = document.createElement('h2'); 
+    title.textContent = z.country;
+
+    const bigDiv = document.createElement('div'); 
+    bigDiv.className='big';
+
+    const countdownStr = "00:00:00:00"; 
+    for (let j = 0; j < countdownStr.length; j++) {
+      const char = countdownStr[j];
+      if (/[0-9]/.test(char)) {
+        const column = document.createElement('div');
+        column.className='digit-column';
+        const track = document.createElement('div');
+        track.className='digit-track';
+        for (let d = 0; d <= 9; d++) {
+          const span = document.createElement('span');
+          span.textContent = d;
+          track.appendChild(span);
+        }
+        column.appendChild(track);
+        bigDiv.appendChild(column);
+      } else {
+        const span = document.createElement('span');
+        span.textContent = char;
+        span.style.display = 'inline-block';
+        span.style.width = '0.6ch';
+        span.style.textAlign = 'center';
+        bigDiv.appendChild(span);
+      }
+    }
+
+    const labelsDiv = document.createElement('div'); 
+    labelsDiv.className='labels';
+    ['Days','Hours','Minutes','Seconds'].forEach(l=>{
+      const lbl=document.createElement('div'); 
+      lbl.textContent=l; 
+      labelsDiv.appendChild(lbl);
+    });
+
+    const tzDiv=document.createElement('div'); 
+    tzDiv.className='timezone'; 
+    tzDiv.textContent=`GMT ${z.offset>=0?'+':''}${z.offset}`;
+    const localDiv=document.createElement('div'); 
+    localDiv.className='localtime'; 
+    localDiv.textContent='00:00 AM';
+
+    panel.append(title,bigDiv,labelsDiv,tzDiv,localDiv);
+    panelsEl.appendChild(panel);
+    panels.push({panel, bigDiv, tzDiv, localDiv, zone:z});
+  }
+  updateTopInfo();
+}
+
+function updateTopInfo(){
+  currentZoneEl.textContent = `${panels[0].zone.country} (GMT${panels[0].zone.offset>=0?'+':''}${panels[0].zone.offset})`;
+  progressEl.textContent = `${(currentStartIndex+1)}/${allZones.length}`;
+}
+
+function animateDigits(bigDiv, newText){
+  const columns = bigDiv.querySelectorAll('.digit-column');
+  let colIndex = 0;
+  for (let i = 0; i < newText.length; i++) {
+    const char = newText[i];
+    if (/[0-9]/.test(char)) {
+      const track = columns[colIndex].querySelector('.digit-track');
+      track.style.transform = `translateY(-${parseInt(char)}em)`;
+      colIndex++;
+    }
+  }
+}
+
+function tick(){
+  let rotate = false;
+  panels.forEach((p,i)=>{
+    const remaining = getRemaining(p.zone.offset);
+    const t = fmt(remaining);
+    const text = `${t.days}:${t.hours}:${t.minutes}:${t.seconds}`;
+    animateDigits(p.bigDiv, text);
+    p.localDiv.textContent = getLocalTime(p.zone.offset);
+    if(remaining<=0 && i===0) rotate=true;
+  });
+  if(rotate){
+    currentStartIndex = (currentStartIndex+1)%allZones.length;
+    renderPanels();
+  }
+}
+
+renderPanels();
+setInterval(tick,1000);
+</script>
+</body>
+</html>
