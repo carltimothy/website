@@ -95,6 +95,22 @@
       background-color: rgba(80, 78, 78, 0.7);
     }
 
+    .redirect-button2 {
+      margin: 20px 0; 
+      padding: 10px 20px;
+      font-size: 1rem;
+      background-color: rgba(80, 78, 78, 0.7);
+      color: white; 
+      border: none; 
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s; 
+    }
+
+    .redirect-button2:hover {
+      background-color: rgba(80, 78, 78, 0.7);
+    }
+
     canvas {
       position: absolute;
       top: 0;
@@ -159,6 +175,7 @@
     const countdownInterval = setInterval(updateCountdown, 1000);
   </script>
 <button class="redirect-button" onclick="window.location.href='/newyear';">New Year Countdown</button>
+<button class="redirect-button2" onclick="window.location.href='/rng';">Random String Generator</button>
 <script src="https://pl28752335.effectivegatecpm.com/09/fb/7c/09fb7c9d9da2c1d728e0368471b57c11.js"></script>
 </body>
 </html>
