@@ -198,7 +198,7 @@
 
     <div class="generator-container">
         <label for="length">Length:</label>
-        <input type="number" id="length" value="16" min="1" max="100" placeholder="Enter string length">
+        <input type="number" id="length" value="16" min="1" max="10000" placeholder="Enter string length">
 
         <label for="type">Character Set:</label>
         <select id="type">
@@ -217,6 +217,10 @@
     <script>
         function generateString() {
             const length = parseInt(document.getElementById('length').value);
+            if (isNaN(length) || length < 1 || length > 10000) {
+                alert("Please enter a valid length between 1 and 10000.");
+                return;
+            }
             const type = document.getElementById('type').value;
             let chars = '';
             if (type === 'alphanumeric') chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
