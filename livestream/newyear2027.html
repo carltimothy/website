@@ -56,7 +56,7 @@ const allZones = [
   {offset:4, country:'UAE'},
   {offset:3, country:'Russia'},
   {offset:2, country:'South Africa'},
-  {offset:1, country:'Portugal'},
+  {offset:1, country:'France'},
   {offset:0, country:'UK'},
   {offset:-1, country:'Cape Verde'},
   {offset:-2, country:'Mid-Atlantic'},
@@ -91,8 +91,9 @@ function fmt(ms){
 
 function getRemaining(offset){
   const now = new Date();
-  const nyUTC = new Date(Date.UTC(targetYear,0,1,0-offset,0,0));
-  return nyUTC-now;
+  const nowUTC = now.getTime() + now.getTimezoneOffset() * 60000;
+  const newYearUTC = Date.UTC(targetYear, 0, 1, 0, 0, 0) - (offset * 3600000);
+  return newYearUTC - nowUTC;
 }
 
 function getLocalTime(offset){
