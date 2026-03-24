@@ -19,8 +19,8 @@ body {
 .panel { background: rgba(0,0,0,0.7); border-radius:6px; padding:20px; position:relative; overflow:hidden; text-align:center; border: 2px solid #333; }
 .panel.active { border: 2px solid #0f9; box-shadow: 0 0 15px rgba(0,255,153,0.3); }
 .panel h2 { margin:0 0 10px; font-size:20px; }
-.big { font-size:48px; font-weight:700; margin-bottom:5px; font-family: 'Courier New', monospace; display:flex; justify-content:center; gap:4px; }
-.digit-column { position: relative; width: 1ch; height: 1em; overflow: hidden; display: inline-block; font-variant-numeric: tabular-nums; }
+.big { font-size: 48px; gap: 2px; }
+.digit-column { width: 1ch; }
 .digit-track { position: absolute; top: 0; left: 0; transition: transform 0.5s ease-in-out; }
 .digit-track span { display: block; height: 1em; text-align: center; }
 .labels { display:flex; justify-content:center; gap:30px; font-size:14px; margin-bottom:5px; }
@@ -130,7 +130,8 @@ function renderPanels(){
     const bigDiv = document.createElement('div'); 
     bigDiv.className='big';
 
-    const countdownStr = "00:00:00:00"; 
+    const daysDigits = 3; // max expected days digits
+    const countdownStr = "000:00:00:00"; // 3 for days, 2 for hours, minutes, seconds 
     for (let j = 0; j < countdownStr.length; j++) {
       const char = countdownStr[j];
       if (/[0-9]/.test(char)) {
@@ -212,7 +213,7 @@ function tick(){
 }
 
 renderPanels();
-setInterval(tick,250);
+setInterval(tick, 1000);
 </script>
 </body>
 </html>
