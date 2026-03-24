@@ -94,16 +94,13 @@ function fmt(ms){
 function getRemaining(offset){
   const now = new Date();
 
-  // Convert current time to UTC timestamp
+  // Current UTC time (ms)
   const nowUTC = now.getTime() + now.getTimezoneOffset() * 60000;
 
-  // Target: Jan 1, 2027 at 00:00 in THAT timezone
-  const target = new Date(Date.UTC(targetYear, 0, 1, 0, 0, 0));
+  // Target UTC time for that timezone
+  const targetUTC = Date.UTC(targetYear, 0, 1, 0, 0, 0) - (offset * 3600000);
 
-  // Shift target BACK by offset to get correct UTC moment
-  target.setUTCHours(target.getUTCHours() - offset);
-
-  return target.getTime() - nowUTC;
+  return targetUTC - nowUTC;
 }
 
 function getLocalTime(offset){
@@ -215,7 +212,7 @@ function tick(){
 }
 
 renderPanels();
-setInterval(tick,1000);
+setInterval(tick,250);
 </script>
 </body>
 </html>
