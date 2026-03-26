@@ -43,75 +43,108 @@ const panelsEl = document.getElementById('panels');
 const currentZoneEl = document.getElementById('currentZone');
 const progressEl = document.getElementById('progress');
 const targetYear = 2026;
+const targetMonth = 11;
+const targetDay = 25;
 
 const allZones = [
-  {offset:12, country:'New Zealand'},
-  {offset:11, country:'Solomon Is.'},
-  {offset:10, country:'Australia'},
-  {offset:9, country:'Japan'},
-  {offset:8, country:'Philippines'},
-  {offset:7, country:'Thailand'},
-  {offset:6, country:'Bangladesh'},
-  {offset:5, country:'Pakistan'},
-  {offset:4, country:'UAE'},
-  {offset:3, country:'Russia'},
-  {offset:2, country:'South Africa'},
-  {offset:1, country:'Portugal'},
-  {offset:0, country:'UK'},
-  {offset:-1, country:'Cape Verde'},
-  {offset:-2, country:'Mid-Atlantic'},
-  {offset:-3, country:'Brazil'},
-  {offset:-4, country:'Canada (East)'},
-  {offset:-5, country:'USA (East)'},
-  {offset:-6, country:'USA (Central)'},
-  {offset:-7, country:'USA (Mountain)'},
-  {offset:-8, country:'USA (Pacific)'},
-  {offset:-9, country:'Alaska'},
-  {offset:-10, country:'Hawaii'},
-  {offset:-11, country:'American Samoa'}
+  {tz:'Pacific/Auckland', country:'New Zealand'},
+  {tz:'Australia/Sydney', country:'Australia'},
+  {tz:'Asia/Tokyo', country:'Japan'},
+  {tz:'Asia/Manila', country:'Philippines'},
+  {tz:'Asia/Bangkok', country:'Thailand'},
+  {tz:'Asia/Dhaka', country:'Bangladesh'},
+  {tz:'Asia/Karachi', country:'Pakistan'},
+  {tz:'Asia/Dubai', country:'UAE'},
+  {tz:'Europe/Moscow', country:'Russia'},
+  {tz:'Africa/Johannesburg', country:'South Africa'},
+  {tz:'Europe/Paris', country:'France'},
+  {tz:'Europe/London', country:'UK'},
+  {tz:'Atlantic/Cape_Verde', country:'Cape Verde'},
+  {tz:'Atlantic/South_Georgia', country:'Mid-Atlantic'},
+  {tz:'America/Sao_Paulo', country:'Brazil'},
+  {tz:'America/Toronto', country:'Canada (East)'},
+  {tz:'America/New_York', country:'USA (East)'},
+  {tz:'America/Chicago', country:'USA (Central)'},
+  {tz:'America/Denver', country:'USA (Mountain)'},
+  {tz:'America/Los_Angeles', country:'USA (Pacific)'},
+  {tz:'America/Anchorage', country:'Alaska'},
+  {tz:'Pacific/Honolulu', country:'Hawaii'},
+  {tz:'Pacific/Pago_Pago', country:'American Samoa'}
 ];
 
-let currentStartIndex = 0;
 const panels = [];
 
 function fmt(ms){
   if(ms<=0) return {days:'00', hours:'00', minutes:'00', seconds:'00'};
-  const s=Math.floor(ms/1000);
-  const d=Math.floor(s/86400);
-  const h=Math.floor((s%86400)/3600);
-  const m=Math.floor((s%3600)/60);
-  const sec=s%60;
+  const s = Math.floor(ms/1000);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
   return {
-    days:String(d).padStart(2,'0'),
-    hours:String(h).padStart(2,'0'),
-    minutes:String(m).padStart(2,'0'),
-    seconds:String(sec).padStart(2,'0')
+    days: String(d).padStart(2,'0'),
+    hours: String(h).padStart(2,'0'),
+    minutes: String(m).padStart(2,'0'),
+    seconds: String(sec).padStart(2,'0')
   };
 }
 
-function getRemaining(offset){
-  const now = new Date();
-  const nyUTC = new Date(Date.UTC(targetYear,11,25,0-offset,0,0));
-  return nyUTC-now;
+// Returns timezone offset in ms for a specific instant.
+// Positive means timezone is ahead of UTC (e.g. UTC+13 => +46800000).
+function getTimeZoneOffsetMs(date, tz) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).formatToParts(date);
+
+  let y = 0, m = 1, d = 1, h = 0, min = 0, s = 0;
+  for (const p of parts) {
+    if (p.type === 'year') y = parseInt(p.value, 10);
+    if (p.type === 'month') m = parseInt(p.value, 10);
+    if (p.type === 'day') d = parseInt(p.value, 10);
+    if (p.type === 'hour') h = parseInt(p.value, 10);
+    if (p.type === 'minute') min = parseInt(p.value, 10);
+    if (p.type === 'second') s = parseInt(p.value, 10);
+  }
+
+  const asUtc = Date.UTC(y, m - 1, d, h, min, s);
+  return asUtc - date.getTime();
 }
 
-function getLocalTime(offset){
-  const now = new Date();
-  const utc = now.getTime() + now.getTimezoneOffset()*60000;
-  const local = new Date(utc + offset*3600000);
-  let h = local.getHours();
-  const m = String(local.getMinutes()).padStart(2,'0');
-  const ampm = h>=12?'PM':'AM';
-  h = h%12||12;
-  return `${h}:${m} ${ampm}`;
+function getRemaining(tz){
+  const nowMs = Date.now();
+  const wallClockMidnightUtc = Date.UTC(targetYear, targetMonth, targetDay, 0, 0, 0);
+
+  // Iteratively solve for the UTC instant where this timezone reads
+  // targetYear-targetMonth-targetDay 00:00:00 local time.
+  let targetUtcMs = wallClockMidnightUtc;
+  for (let i = 0; i < 3; i++) {
+    const offset = getTimeZoneOffsetMs(new Date(targetUtcMs), tz);
+    targetUtcMs = wallClockMidnightUtc - offset;
+  }
+
+  return targetUtcMs - nowMs;
+}
+
+function getLocalTime(tz){
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    hour12: true,
+    hour: 'numeric',
+    minute: '2-digit'
+  }).format(new Date());
 }
 
 function renderPanels(){
   panelsEl.innerHTML = '';
   panels.length = 0;
-  for(let i=0;i<24;i++){
-    const idx = (currentStartIndex+i)%allZones.length;
-    const z = allZones[idx];
+  allZones.forEach((z, i)=>{
     const panel = document.createElement('div');
     panel.className = 'panel';
     if(i===0) panel.classList.add('active');
@@ -122,7 +155,7 @@ function renderPanels(){
     const bigDiv = document.createElement('div'); 
     bigDiv.className='big';
 
-    const countdownStr = "00:00:00:00"; 
+    const countdownStr = "000:00:00:00";
     for (let j = 0; j < countdownStr.length; j++) {
       const char = countdownStr[j];
       if (/[0-9]/.test(char)) {
@@ -157,7 +190,7 @@ function renderPanels(){
 
     const tzDiv=document.createElement('div'); 
     tzDiv.className='timezone'; 
-    tzDiv.textContent=`GMT ${z.offset>=0?'+':''}${z.offset}`;
+    tzDiv.textContent = z.tz;
     const localDiv=document.createElement('div'); 
     localDiv.className='localtime'; 
     localDiv.textContent='00:00 AM';
@@ -165,13 +198,13 @@ function renderPanels(){
     panel.append(title,bigDiv,labelsDiv,tzDiv,localDiv);
     panelsEl.appendChild(panel);
     panels.push({panel, bigDiv, tzDiv, localDiv, zone:z});
-  }
+  });
   updateTopInfo();
 }
 
 function updateTopInfo(){
-  currentZoneEl.textContent = `${panels[0].zone.country} (GMT${panels[0].zone.offset>=0?'+':''}${panels[0].zone.offset})`;
-  progressEl.textContent = `${(currentStartIndex+1)}/${allZones.length}`;
+  currentZoneEl.textContent = `${panels[0].zone.country} (${panels[0].zone.tz})`;
+  progressEl.textContent = `1/${allZones.length}`;
 }
 
 function animateDigits(bigDiv, newText){
@@ -188,22 +221,17 @@ function animateDigits(bigDiv, newText){
 }
 
 function tick(){
-  let rotate = false;
-  panels.forEach((p,i)=>{
-    const remaining = getRemaining(p.zone.offset);
+  panels.forEach((p)=>{
+    const remaining = getRemaining(p.zone.tz);
     const t = fmt(remaining);
     const text = `${t.days}:${t.hours}:${t.minutes}:${t.seconds}`;
     animateDigits(p.bigDiv, text);
-    p.localDiv.textContent = getLocalTime(p.zone.offset);
-    if(remaining<=0 && i===0) rotate=true;
+    p.localDiv.textContent = getLocalTime(p.zone.tz);
   });
-  if(rotate){
-    currentStartIndex = (currentStartIndex+1)%allZones.length;
-    renderPanels();
-  }
 }
 
 renderPanels();
+tick();
 setInterval(tick,1000);
 </script>
 </body>

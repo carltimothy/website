@@ -89,30 +89,48 @@ function fmt(ms){
   };
 }
 
-// Get remaining ms for target New Year in specific timezone
-function getRemaining(tz){
-  const now = new Date();
-
-  // Get Jan 1, 00:00 target year in timezone
+// Returns timezone offset in ms for a specific instant.
+// Positive means timezone is ahead of UTC (e.g. UTC+13 => +46800000).
+function getTimeZoneOffsetMs(date, tz) {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: tz,
-    year:'numeric', month:'numeric', day:'numeric',
-    hour:'numeric', minute:'numeric', second:'numeric',
-    hour12:false
-  }).formatToParts(new Date(Date.UTC(targetYear,0,1,0,0,0)));
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).formatToParts(date);
 
-  let y=targetYear, m=0, d=1, h=0, min=0, s=0;
-  for(const p of parts){
-    if(p.type==='year') y=parseInt(p.value);
-    if(p.type==='month') m=parseInt(p.value)-1;
-    if(p.type==='day') d=parseInt(p.value);
-    if(p.type==='hour') h=parseInt(p.value);
-    if(p.type==='minute') min=parseInt(p.value);
-    if(p.type==='second') s=parseInt(p.value);
+  let y = 0, m = 1, d = 1, h = 0, min = 0, s = 0;
+  for (const p of parts) {
+    if (p.type === 'year') y = parseInt(p.value, 10);
+    if (p.type === 'month') m = parseInt(p.value, 10);
+    if (p.type === 'day') d = parseInt(p.value, 10);
+    if (p.type === 'hour') h = parseInt(p.value, 10);
+    if (p.type === 'minute') min = parseInt(p.value, 10);
+    if (p.type === 'second') s = parseInt(p.value, 10);
   }
 
-  const target = new Date(y, m, d, h, min, s);
-  return target - now;
+  const asUtc = Date.UTC(y, m - 1, d, h, min, s);
+  return asUtc - date.getTime();
+}
+
+// Get remaining ms for target New Year in specific timezone
+function getRemaining(tz){
+  const nowMs = Date.now();
+  const wallClockMidnightUtc = Date.UTC(targetYear, 0, 1, 0, 0, 0);
+
+  // Iteratively solve for the UTC instant where this timezone reads
+  // targetYear-01-01 00:00:00 local time.
+  let targetUtcMs = wallClockMidnightUtc;
+  for (let i = 0; i < 3; i++) {
+    const offset = getTimeZoneOffsetMs(new Date(targetUtcMs), tz);
+    targetUtcMs = wallClockMidnightUtc - offset;
+  }
+
+  return targetUtcMs - nowMs;
 }
 
 // Local time string
@@ -215,6 +233,7 @@ function tick(){
 }
 
 renderPanels();
+tick();
 setInterval(tick,1000);
 </script>
 </body>
