@@ -44,37 +44,39 @@ const currentZoneEl = document.getElementById('currentZone');
 const progressEl = document.getElementById('progress');
 const targetYear = 2027;
 
+// Using IANA timezone IDs for accuracy including DST
 const allZones = [
-  {offset:13, country:'New Zealand'},
-  {offset:10, country:'Australia'},
-  {offset:9, country:'Japan'},
-  {offset:8, country:'Philippines'},
-  {offset:7, country:'Thailand'},
-  {offset:6, country:'Bangladesh'},
-  {offset:5, country:'Pakistan'},
-  {offset:4, country:'UAE'},
-  {offset:3, country:'Russia'},
-  {offset:2, country:'South Africa'},
-  {offset:1, country:'France'},
-  {offset:0, country:'UK'},
-  {offset:-1, country:'Cape Verde'},
-  {offset:-2, country:'Mid-Atlantic'},
-  {offset:-3, country:'Brazil'},
-  {offset:-4, country:'Canada (East)'},
-  {offset:-5, country:'USA (East)'},
-  {offset:-6, country:'USA (Central)'},
-  {offset:-7, country:'USA (Mountain)'},
-  {offset:-8, country:'USA (Pacific)'},
-  {offset:-9, country:'Alaska'},
-  {offset:-10, country:'Hawaii'},
-  {offset:-11, country:'American Samoa'}
+  {tz:'Pacific/Auckland', country:'New Zealand'},
+  {tz:'Australia/Sydney', country:'Australia'},
+  {tz:'Asia/Tokyo', country:'Japan'},
+  {tz:'Asia/Manila', country:'Philippines'},
+  {tz:'Asia/Bangkok', country:'Thailand'},
+  {tz:'Asia/Dhaka', country:'Bangladesh'},
+  {tz:'Asia/Karachi', country:'Pakistan'},
+  {tz:'Asia/Dubai', country:'UAE'},
+  {tz:'Europe/Moscow', country:'Russia'},
+  {tz:'Africa/Johannesburg', country:'South Africa'},
+  {tz:'Europe/Paris', country:'France'},
+  {tz:'Europe/London', country:'UK'},
+  {tz:'Atlantic/Cape_Verde', country:'Cape Verde'},
+  {tz:'Atlantic/South_Georgia', country:'Mid-Atlantic'},
+  {tz:'America/Sao_Paulo', country:'Brazil'},
+  {tz:'America/Toronto', country:'Canada (East)'},
+  {tz:'America/New_York', country:'USA (East)'},
+  {tz:'America/Chicago', country:'USA (Central)'},
+  {tz:'America/Denver', country:'USA (Mountain)'},
+  {tz:'America/Los_Angeles', country:'USA (Pacific)'},
+  {tz:'America/Anchorage', country:'Alaska'},
+  {tz:'Pacific/Honolulu', country:'Hawaii'},
+  {tz:'Pacific/Pago_Pago', country:'American Samoa'}
 ];
 
 let currentStartIndex = 0;
 const panels = [];
 
+// Format milliseconds into DD:HH:MM:SS
 function fmt(ms){
-  if(ms<=0) {return {days:'--', hours:'--', minutes:'--', seconds:'--'};}
+  if(ms<=0) return {days:'--', hours:'--', minutes:'--', seconds:'--'};
   const s=Math.floor(ms/1000);
   const d=Math.floor(s/86400);
   const h=Math.floor((s%86400)/3600);
@@ -88,27 +90,33 @@ function fmt(ms){
   };
 }
 
-function getRemaining(offset){
+// Get remaining time to New Year in a timezone using IANA ID
+function getRemaining(tz){
   const now = new Date();
-
-  // Current UTC time (ms)
-  const nowUTC = now.getTime() + now.getTimezoneOffset() * 60000;
-
-  // Target UTC time for that timezone
-  const targetUTC = Date.UTC(targetYear, 0, 1, 0, 0, 0) - (offset * 3600000);
-
-  return targetUTC - nowUTC;
+  // Use Intl API to get the local time in target timezone
+  const options = {timeZone: tz, hour12:false, year:'numeric', month:'numeric', day:'numeric', hour:'numeric', minute:'numeric', second:'numeric'};
+  const formatter = new Intl.DateTimeFormat('en-US', options);
+  const parts = formatter.formatToParts(now);
+  let year = targetYear, month = 0, day = 1, hour = 0, minute = 0, second = 0;
+  for(const p of parts){
+    if(p.type==='year') year = parseInt(p.value);
+    if(p.type==='month') month = parseInt(p.value)-1;
+    if(p.type==='day') day = parseInt(p.value);
+    if(p.type==='hour') hour = parseInt(p.value);
+    if(p.type==='minute') minute = parseInt(p.value);
+    if(p.type==='second') second = parseInt(p.value);
+  }
+  // Target New Year local time in tz
+  const targetStr = new Date(Date.UTC(year, month, day, hour, minute, second));
+  // Create actual Date object for Jan 1, 00:00 in tz
+  const target = new Date(new Intl.DateTimeFormat('en-US', {timeZone: tz, hour12:false, year:'numeric', month:'numeric', day:'numeric', hour:'numeric', minute:'numeric', second:'numeric'})
+                         .format(new Date(Date.UTC(targetYear,0,1,0,0,0))));
+  return target - now;
 }
 
-function getLocalTime(offset){
-  const now = new Date();
-  const utc = now.getTime() + now.getTimezoneOffset()*60000;
-  const local = new Date(utc + offset*3600000);
-  let h = local.getHours();
-  const m = String(local.getMinutes()).padStart(2,'0');
-  const ampm = h>=12?'PM':'AM';
-  h = h%12||12;
-  return `${h}:${m} ${ampm}`;
+// Local time string
+function getLocalTime(tz){
+  return new Intl.DateTimeFormat('en-US', {timeZone: tz, hour12:true, hour:'numeric', minute:'2-digit'}).format(new Date());
 }
 
 function renderPanels(){
@@ -127,8 +135,7 @@ function renderPanels(){
     const bigDiv = document.createElement('div'); 
     bigDiv.className='big';
 
-    const daysDigits = 3; // max expected days digits
-    const countdownStr = "000:00:00:00"; // 3 for days, 2 for hours, minutes, seconds 
+    const countdownStr = "000:00:00:00";
     for (let j = 0; j < countdownStr.length; j++) {
       const char = countdownStr[j];
       if (/[0-9]/.test(char)) {
@@ -163,7 +170,7 @@ function renderPanels(){
 
     const tzDiv=document.createElement('div'); 
     tzDiv.className='timezone'; 
-    tzDiv.textContent=`GMT ${z.offset>=0?'+':''}${z.offset}`;
+    tzDiv.textContent=`${z.tz}`;
     const localDiv=document.createElement('div'); 
     localDiv.className='localtime'; 
     localDiv.textContent='00:00 AM';
@@ -176,7 +183,7 @@ function renderPanels(){
 }
 
 function updateTopInfo(){
-  currentZoneEl.textContent = `${panels[0].zone.country} (GMT${panels[0].zone.offset>=0?'+':''}${panels[0].zone.offset})`;
+  currentZoneEl.textContent = `${panels[0].zone.country} (${panels[0].zone.tz})`;
   progressEl.textContent = `${(currentStartIndex+1)}/${allZones.length}`;
 }
 
@@ -196,11 +203,11 @@ function animateDigits(bigDiv, newText){
 function tick(){
   let rotate = false;
   panels.forEach((p,i)=>{
-    const remaining = getRemaining(p.zone.offset);
+    const remaining = getRemaining(p.zone.tz);
     const t = fmt(remaining);
     const text = `${t.days}:${t.hours}:${t.minutes}:${t.seconds}`;
     animateDigits(p.bigDiv, text);
-    p.localDiv.textContent = getLocalTime(p.zone.offset);
+    p.localDiv.textContent = getLocalTime(p.zone.tz);
     if(i === 0 && remaining <= 0){rotate = true;}
   });
   if(rotate){
