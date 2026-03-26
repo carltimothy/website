@@ -71,47 +71,60 @@ const allZones = [
   {tz:'Pacific/Pago_Pago', country:'American Samoa'}
 ];
 
-let currentStartIndex = 0;
 const panels = [];
 
-// Format milliseconds into DD:HH:MM:SS
+// Convert ms to days, hours, minutes, seconds (accurate)
 function fmt(ms){
   if(ms<=0) return {days:'00', hours:'00', minutes:'00', seconds:'00'};
-  const s=Math.floor(ms/1000);
-  const d=Math.floor(s/86400);
-  const h=Math.floor((s%86400)/3600);
-  const m=Math.floor((s%3600)/60);
-  const sec=s%60;
+  const s = Math.floor(ms/1000);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
   return {
-    days:String(d).padStart(2,'0'),
-    hours:String(h).padStart(2,'0'),
-    minutes:String(m).padStart(2,'0'),
-    seconds:String(sec).padStart(2,'0')
+    days: String(d).padStart(2,'0'),
+    hours: String(h).padStart(2,'0'),
+    minutes: String(m).padStart(2,'0'),
+    seconds: String(sec).padStart(2,'0')
   };
 }
 
-// Get remaining time in milliseconds to New Year in that timezone
+// Get remaining ms for target New Year in specific timezone
 function getRemaining(tz){
   const now = new Date();
-  // Target: Jan 1, 2027 00:00:00 in the specific timezone
-  const target = new Date(new Intl.DateTimeFormat('en-US', {
-    timeZone: tz, 
-    year:'numeric', month:'numeric', day:'numeric', 
-    hour:'numeric', minute:'numeric', second:'numeric', hour12:false
-  }).format(new Date(Date.UTC(targetYear,0,1,0,0,0))));
+
+  // Get Jan 1, 00:00 target year in timezone
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    year:'numeric', month:'numeric', day:'numeric',
+    hour:'numeric', minute:'numeric', second:'numeric',
+    hour12:false
+  }).formatToParts(new Date(Date.UTC(targetYear,0,1,0,0,0)));
+
+  let y=targetYear, m=0, d=1, h=0, min=0, s=0;
+  for(const p of parts){
+    if(p.type==='year') y=parseInt(p.value);
+    if(p.type==='month') m=parseInt(p.value)-1;
+    if(p.type==='day') d=parseInt(p.value);
+    if(p.type==='hour') h=parseInt(p.value);
+    if(p.type==='minute') min=parseInt(p.value);
+    if(p.type==='second') s=parseInt(p.value);
+  }
+
+  const target = new Date(y, m, d, h, min, s);
   return target - now;
 }
 
-// Get local time string for display
+// Local time string
 function getLocalTime(tz){
   return new Intl.DateTimeFormat('en-US', {timeZone: tz, hour12:true, hour:'numeric', minute:'2-digit'}).format(new Date());
 }
 
+// Render countdown panels
 function renderPanels(){
   panelsEl.innerHTML = '';
   panels.length = 0;
-  for(let i=0;i<allZones.length;i++){
-    const z = allZones[i];
+  allZones.forEach((z, i)=>{
     const panel = document.createElement('div');
     panel.className = 'panel';
     if(i===0) panel.classList.add('active');
@@ -122,6 +135,7 @@ function renderPanels(){
     const bigDiv = document.createElement('div'); 
     bigDiv.className='big';
 
+    // Initial dummy digits
     const countdownStr = "000:00:00:00";
     for (let j = 0; j < countdownStr.length; j++) {
       const char = countdownStr[j];
@@ -165,15 +179,17 @@ function renderPanels(){
     panel.append(title,bigDiv,labelsDiv,tzDiv,localDiv);
     panelsEl.appendChild(panel);
     panels.push({panel, bigDiv, tzDiv, localDiv, zone:z});
-  }
+  });
   updateTopInfo();
 }
 
+// Top info bar
 function updateTopInfo(){
   currentZoneEl.textContent = `${panels[0].zone.country} (${panels[0].zone.tz})`;
   progressEl.textContent = `1/${allZones.length}`;
 }
 
+// Animate digits
 function animateDigits(bigDiv, newText){
   const columns = bigDiv.querySelectorAll('.digit-column');
   let colIndex = 0;
@@ -187,8 +203,9 @@ function animateDigits(bigDiv, newText){
   }
 }
 
+// Update countdown every second
 function tick(){
-  panels.forEach((p,i)=>{
+  panels.forEach((p)=>{
     const remaining = getRemaining(p.zone.tz);
     const t = fmt(remaining);
     const text = `${t.days}:${t.hours}:${t.minutes}:${t.seconds}`;
