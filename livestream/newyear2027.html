@@ -44,7 +44,7 @@ const currentZoneEl = document.getElementById('currentZone');
 const progressEl = document.getElementById('progress');
 const targetYear = 2027;
 
-// Using IANA timezone IDs for accuracy including DST
+// IANA timezones
 const allZones = [
   {tz:'Pacific/Auckland', country:'New Zealand'},
   {tz:'Australia/Sydney', country:'Australia'},
@@ -76,7 +76,7 @@ const panels = [];
 
 // Format milliseconds into DD:HH:MM:SS
 function fmt(ms){
-  if(ms<=0) return {days:'--', hours:'--', minutes:'--', seconds:'--'};
+  if(ms<=0) return {days:'00', hours:'00', minutes:'00', seconds:'00'};
   const s=Math.floor(ms/1000);
   const d=Math.floor(s/86400);
   const h=Math.floor((s%86400)/3600);
@@ -90,31 +90,19 @@ function fmt(ms){
   };
 }
 
-// Get remaining time to New Year in a timezone using IANA ID
+// Get remaining time in milliseconds to New Year in that timezone
 function getRemaining(tz){
   const now = new Date();
-  // Use Intl API to get the local time in target timezone
-  const options = {timeZone: tz, hour12:false, year:'numeric', month:'numeric', day:'numeric', hour:'numeric', minute:'numeric', second:'numeric'};
-  const formatter = new Intl.DateTimeFormat('en-US', options);
-  const parts = formatter.formatToParts(now);
-  let year = targetYear, month = 0, day = 1, hour = 0, minute = 0, second = 0;
-  for(const p of parts){
-    if(p.type==='year') year = parseInt(p.value);
-    if(p.type==='month') month = parseInt(p.value)-1;
-    if(p.type==='day') day = parseInt(p.value);
-    if(p.type==='hour') hour = parseInt(p.value);
-    if(p.type==='minute') minute = parseInt(p.value);
-    if(p.type==='second') second = parseInt(p.value);
-  }
-  // Target New Year local time in tz
-  const targetStr = new Date(Date.UTC(year, month, day, hour, minute, second));
-  // Create actual Date object for Jan 1, 00:00 in tz
-  const target = new Date(new Intl.DateTimeFormat('en-US', {timeZone: tz, hour12:false, year:'numeric', month:'numeric', day:'numeric', hour:'numeric', minute:'numeric', second:'numeric'})
-                         .format(new Date(Date.UTC(targetYear,0,1,0,0,0))));
+  // Target: Jan 1, 2027 00:00:00 in the specific timezone
+  const target = new Date(new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, 
+    year:'numeric', month:'numeric', day:'numeric', 
+    hour:'numeric', minute:'numeric', second:'numeric', hour12:false
+  }).format(new Date(Date.UTC(targetYear,0,1,0,0,0))));
   return target - now;
 }
 
-// Local time string
+// Get local time string for display
 function getLocalTime(tz){
   return new Intl.DateTimeFormat('en-US', {timeZone: tz, hour12:true, hour:'numeric', minute:'2-digit'}).format(new Date());
 }
@@ -123,8 +111,7 @@ function renderPanels(){
   panelsEl.innerHTML = '';
   panels.length = 0;
   for(let i=0;i<allZones.length;i++){
-    const idx = (currentStartIndex+i)%allZones.length;
-    const z = allZones[idx];
+    const z = allZones[i];
     const panel = document.createElement('div');
     panel.className = 'panel';
     if(i===0) panel.classList.add('active');
@@ -184,7 +171,7 @@ function renderPanels(){
 
 function updateTopInfo(){
   currentZoneEl.textContent = `${panels[0].zone.country} (${panels[0].zone.tz})`;
-  progressEl.textContent = `${(currentStartIndex+1)}/${allZones.length}`;
+  progressEl.textContent = `1/${allZones.length}`;
 }
 
 function animateDigits(bigDiv, newText){
@@ -201,19 +188,13 @@ function animateDigits(bigDiv, newText){
 }
 
 function tick(){
-  let rotate = false;
   panels.forEach((p,i)=>{
     const remaining = getRemaining(p.zone.tz);
     const t = fmt(remaining);
     const text = `${t.days}:${t.hours}:${t.minutes}:${t.seconds}`;
     animateDigits(p.bigDiv, text);
     p.localDiv.textContent = getLocalTime(p.zone.tz);
-    if(i === 0 && remaining <= 0){rotate = true;}
   });
-  if(rotate){
-    currentStartIndex = (currentStartIndex+1)%allZones.length;
-    renderPanels();
-  }
 }
 
 renderPanels();
