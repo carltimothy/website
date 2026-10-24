@@ -12,17 +12,15 @@ body {
   background-size: cover;
   color: #fff;
 }
-.main { min-height: 100vh; box-sizing: border-box; display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 10px; padding: 10px; }
+.main { display: grid; grid-template-rows: auto auto 1fr; gap: 10px; padding: 10px; }
 .top-title { background: rgba(26,26,26,0.7); border-radius: 6px; padding: 20px; text-align:center; font-size:32px; font-weight:700; display:flex; align-items:center; justify-content:center; overflow:hidden; }
 .top-info { background: rgba(26,26,26,0.7); border-radius: 6px; padding: 10px; text-align: center; font-size: 16px; color: #0f9; font-weight:600; display:flex; justify-content:center; align-items:center; }
-.panels { min-height: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); gap: 10px; }
-.panel:nth-last-child(3) { grid-column: 2; }
+.panels { display: grid; grid-template-columns: repeat(3,1fr); grid-auto-rows: 180px; gap: 10px; }
 .panel { background: rgba(0,0,0,0.7); border-radius:6px; padding:20px; position:relative; overflow:hidden; text-align:center; border: 2px solid #333; }
 .panel.active { border: 2px solid #0f9; box-shadow: 0 0 15px rgba(0,255,153,0.3); }
 .panel h2 { margin:0 0 10px; font-size:20px; }
 .big { font-size:48px; font-weight:700; margin-bottom:5px; font-family: 'Courier New', monospace; display:flex; justify-content:center; gap:4px; }
 .digit-column { position: relative; width: 1ch; height: 1em; overflow: hidden; display: inline-block; font-variant-numeric: tabular-nums; }
-.digit-column.day-hundreds.hidden { display: none; }
 .digit-track { position: absolute; top: 0; left: 0; transition: transform 0.5s ease-in-out; }
 .digit-track span { display: block; height: 1em; text-align: center; }
 .labels { display:flex; justify-content:center; gap:30px; font-size:14px; margin-bottom:5px; }
@@ -50,6 +48,7 @@ const targetDay = 25;
 
 const allZones = [
   {tz:'Pacific/Auckland', country:'New Zealand'},
+  {tz:'Pacific/Fiji', country:'Fiji'},
   {tz:'Australia/Sydney', country:'Australia'},
   {tz:'Asia/Tokyo', country:'Japan'},
   {tz:'Asia/Manila', country:'Philippines'},
@@ -77,14 +76,14 @@ const allZones = [
 const panels = [];
 
 function fmt(ms){
-  if(ms<=0) return {days:'000', hours:'00', minutes:'00', seconds:'00'};
+  if(ms<=0) return {days:'00', hours:'00', minutes:'00', seconds:'00'};
   const s = Math.floor(ms/1000);
   const d = Math.floor(s / 86400);
   const h = Math.floor((s % 86400) / 3600);
   const m = Math.floor((s % 3600) / 60);
   const sec = s % 60;
   return {
-    days: String(d).padStart(3,'0'),
+    days: String(d).padStart(2,'0'),
     hours: String(h).padStart(2,'0'),
     minutes: String(m).padStart(2,'0'),
     seconds: String(sec).padStart(2,'0')
@@ -163,7 +162,6 @@ function renderPanels(){
       if (/[0-9]/.test(char)) {
         const column = document.createElement('div');
         column.className='digit-column';
-        if (j === 0) column.classList.add('day-hundreds');
         const track = document.createElement('div');
         track.className='digit-track';
         for (let d = 0; d <= 9; d++) {
@@ -228,7 +226,6 @@ function tick(){
     const remaining = getRemaining(p.zone.tz);
     const t = fmt(remaining);
     const text = `${t.days}:${t.hours}:${t.minutes}:${t.seconds}`;
-    p.bigDiv.querySelector('.day-hundreds').classList.toggle('hidden', t.days[0] === '0');
     animateDigits(p.bigDiv, text);
     p.localDiv.textContent = getLocalTime(p.zone.tz);
   });
